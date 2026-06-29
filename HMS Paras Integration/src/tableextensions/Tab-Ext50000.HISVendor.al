@@ -79,6 +79,17 @@ tableextension 50000 "EDC HIS Vendor Ext" extends Vendor
 
             end;
         }
+        field(50053; "Payment Advice E-mail"; Text[250])
+        {
+            DataClassification = CustomerContent;
+            Caption = 'Payment Advice Email';
+            ExtendedDatatype = EMail;
+
+            trigger OnValidate()
+            begin
+                ValidateEmail();
+            end;
+        }
 
 
     }
@@ -94,4 +105,24 @@ tableextension 50000 "EDC HIS Vendor Ext" extends Vendor
     //     if "EDC Sync Record Exists" then
     //         Error('Record synchronized to HIS, rename is not allowed');
     // end;
+    local procedure ValidateEmail()
+    var
+        MailManagement: Codeunit "Mail Management";
+        IsHandled: Boolean;
+    begin
+        IsHandled := false;
+        OnBeforeValidateEmail(Rec, IsHandled, xRec);
+        if IsHandled then
+            exit;
+
+        if "E-Mail" = '' then
+            exit;
+        MailManagement.CheckValidEmailAddresses("E-Mail");
+    end;
+
+    [IntegrationEvent(false, false)]
+    local procedure OnBeforeValidateEmail(var Vendor: Record Vendor; var IsHandled: Boolean; xVendor: Record Vendor)
+    begin
+    end;
+
 }

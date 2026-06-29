@@ -7,6 +7,7 @@ pageextension 50002 "EDC HIS Vendor Bank Acc. Card" extends "Vendor Bank Account
             field("EDC IFSC Code"; Rec."EDC IFSC Code")
             {
                 Caption = 'IFSC Code';
+                Visible = false;
                 ToolTip = 'Enter IFDC Code of Bank Account.';
                 ApplicationArea = all;
             }

@@ -46,6 +46,15 @@ pageextension 50000 "EDC HIS Vendor Card" extends "Vendor Card"
                 ToolTip = 'Specifies the value of the Name 2 field';
             }
         }
+        addafter("E-Mail")
+        {
+            field("Payment Advice E-mail"; Rec."Payment Advice E-mail")
+            {
+                ApplicationArea = All;
+                Caption = 'Cc Payment Advice Email';
+                ToolTip = 'Specifies the value of the Payment Advice E-mail field';
+            }
+        }
     }
 
     actions
