@@ -183,5 +183,20 @@ permissionset 50000 "EDC HIS Permission"
         table "LIMS Post Bill Discount" = X,
         page "E3 Post Bill Discount API" = X,
         table "HIS Allow Posting Date" = X,
-        tabledata "HIS Allow Posting Date" = RIMD;
+        tabledata "HIS Allow Posting Date" = RIMD,
+        table "E3 Asset Staging" = X,
+        tabledata "E3 Asset Staging" = RIMD,
+        table "E3 Assets Details" = X,
+        tabledata "E3 Assets Details" = RIMD,
+        table "E3 Assets Group" = X,
+        tabledata "E3 Assets Group" = RIMD,
+        page "E3 Asset Details" = X,
+        page "E3 Asset Details Sent" = X,
+        page "E3 Asset Staging" = X,
+        page "E3 Asset Staging Generated" = X,
+        page "E3 Assets Group" = X,
+        page "E3 ITSM API" = X,
+        page E3ITSMSetup = X,
+        table "E3 ITSM Setup" = X,
+        tabledata "E3 ITSM Setup" = RIMD;
 }

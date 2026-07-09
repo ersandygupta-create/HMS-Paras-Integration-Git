@@ -810,9 +810,83 @@ pageextension 50003 "EDC HIS Business Manager RC" extends "Business Manager Role
             }
         }
 
+        addafter("EDC HIS Interface")
+        {
+            group("Asset Capitalization")
+            {
+                Caption = 'Asset Capitalization';
+                group("Asset Setup")
+                {
+                    Caption = 'Asset Setup';
+                    action("ITSM Setup")
+                    {
+                        ApplicationArea = Basic, Suite;
+                        Caption = 'ITSM Setup';
+                        Image = Setup;
+                        RunObject = Page E3ITSMSetup;
+                        RunPageMode = Create;
+                        ToolTip = 'ITSM Setup';
+                    }
 
-        //}
-        //}
+                    action("E3 Asset Group")
+                    {
+                        ApplicationArea = Basic, Suite;
+                        Caption = 'Asset Group';
+                        Image = Setup;
+                        RunObject = Page "E3 Assets Group";
+                        RunPageMode = Create;
+                        ToolTip = 'Asset Setup';
+                    }
+                }
+                group("Asset staging")
+                {
+                    Caption = 'Asset Staging';
+                    action("E3 Asset Capitalization")
+                    {
+                        ApplicationArea = Basic, Suite;
+                        Caption = 'Asset Staging';
+                        Image = ViewPage;
+                        RunObject = Page "E3 Asset Staging";
+                        RunPageMode = Create;
+                        ToolTip = 'Executes the Asset Capitalization action.';
+                    }
+                    action("E3 Asset Staging Generated")
+                    {
+                        ApplicationArea = Basic, Suite;
+                        Caption = 'Asset Staging Generated';
+                        Image = ViewPage;
+                        RunObject = Page "E3 Asset Staging Generated";
+                        RunPageMode = Create;
+                        ToolTip = 'Executes the Asset Capitalization action.';
+                    }
+
+                }
+                group("Asset Details")
+                {
+                    Caption = 'Asset Details';
+                    action("Asset Detail")
+                    {
+                        ApplicationArea = Basic, Suite;
+                        Caption = 'Asset Details';
+                        Image = ViewPage;
+                        RunObject = Page "E3 Asset Details";
+                        RunPageMode = Create;
+                        ToolTip = 'Asset Details';
+                    }
+                    action("Asset Details Sent")
+                    {
+                        ApplicationArea = Basic, Suite;
+                        Image = ViewPage;
+                        RunObject = Page "E3 Asset Details Sent";
+                        RunPageMode = Create;
+                        ToolTip = 'Asset Details';
+                    }
+                }
+
+
+            }
+        }
+
         addbefore(Action39)
         {
             group("LIMS Interface")

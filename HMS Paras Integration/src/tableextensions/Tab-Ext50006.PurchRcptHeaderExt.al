@@ -27,6 +27,12 @@ tableextension 50006 "EDC HIS Purch. Rcpt. Header" extends "Purch. Rcpt. Header"
             DataClassification = CustomerContent;
             Caption = 'Store Name';
         }
+        field(50010; "AssetStaging Created"; Boolean)
+        {
+            DataClassification = CustomerContent;
+            Caption = 'Asset Staging Created';
+        }
+
 
     }
 }
