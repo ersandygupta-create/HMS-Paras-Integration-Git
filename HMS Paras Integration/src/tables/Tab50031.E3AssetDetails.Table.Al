@@ -133,6 +133,26 @@ table 50031 "E3 Assets Details"
         {
             Caption = 'FA Sub Class';
         }
+        field(46; "Depreciation Years"; Integer)
+        {
+            Caption = 'Depreciation Years';
+        }
+        field(47; "Depreciation Method"; Enum "FA Depreciation Method")
+        {
+            Caption = 'Depreciation Method';
+        }
+        field(48; "Depreciation %"; Decimal)
+        {
+            Caption = 'Depreciation %';
+        }
+        field(49; "Amount/Qty"; Decimal)
+        {
+            Caption = 'Amount per FA';
+        }
+        field(50; "GST Amount"; Decimal)
+        {
+            Caption = 'GST Amount';
+        }
     }
     keys
     {

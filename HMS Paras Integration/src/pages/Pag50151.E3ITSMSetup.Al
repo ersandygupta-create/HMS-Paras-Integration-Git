@@ -10,7 +10,7 @@ page 50151 E3ITSMSetup
     {
         area(Content)
         {
-            group(GroupName)
+            group("Assets Setup")
             {
                 field(Code; Rec.Code)
                 {

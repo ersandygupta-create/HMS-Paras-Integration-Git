@@ -128,7 +128,7 @@ page 50149 "E3 Asset Details"
                     ApplicationArea = All;
                     ToolTip = 'Specify Assets Name';
                 }
-                field(Amount; Rec.Amount)
+                field(Amount; Rec."Amount/Qty")
                 {
                     ApplicationArea = All;
                     ToolTip = 'Specify Amount';

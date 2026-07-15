@@ -1,7 +1,7 @@
 page 50154 "E3 ITSM API"
 {
     APIGroup = 'apiITSM';
-    APIPublisher = 'e3';
+    APIPublisher = 'mindcurve';
     APIVersion = 'v2.0';
     ApplicationArea = All;
     Caption = 'ITSMAPI';
@@ -10,6 +10,7 @@ page 50154 "E3 ITSM API"
     EntitySetName = 'itsmAssetMasters';
     PageType = API;
     SourceTable = "E3 Assets Details";
+    ODataKeyFields = "Entry No.";
     Extensible = false;
 
     layout
@@ -20,24 +21,17 @@ page 50154 "E3 ITSM API"
             {
                 field(entryNo; Rec."Entry No.")
                 {
-                    ApplicationArea = All;
-                    ToolTip = 'Specifies the entry number.';
-                    Editable = false;
+                    Caption = 'Entry No.';
                 }
                 field("puttouseDate"; rec."Put to use Date (ITSM)")
                 {
-                    ApplicationArea = All;
-                    ToolTip = 'Specify Put to use Date';
+                    Caption = 'Put to use Date (ITSM)';
                 }
                 field("assetUniqueId"; Rec."Asset uniqe ID (ITSM)")
                 {
-                    ApplicationArea = All;
-                    ToolTip = 'Specify ITSM Asset No';
+                    Caption = 'Asset uniqe ID (ITSM)';
 
                 }
-
-
-
             }
         }
     }

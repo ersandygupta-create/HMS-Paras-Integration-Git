@@ -40,6 +40,9 @@ codeunit 50028 "E3 Asset Capatlization"
         DimSetEntry: Record "Dimension Set Entry";
         Qty: Integer;
         DimensionValue: Record "Dimension Value";
+        GSTPercent: Decimal;
+        GSTAmount: Decimal;
+        GSTText: Text;
 
     begin
         Qty := PurchRcptLine.Quantity;
@@ -86,7 +89,7 @@ codeunit 50028 "E3 Asset Capatlization"
         AssetStagingRec."Vendor Name" := Vendor.Name;
         AssetStagingRec."Asset Group" := '';
         Item.Get(PurchRcptLine."No.");
-        AssetStagingRec."E3 Capitalization Type" := Item."E3Capitalization Type";
+        AssetStagingRec."Capitalization Type" := Item."E3Capitalization Type";
         AssetStagingRec."Gen. Prod. Posting Group" := PurchRcptLine."Gen. Prod. Posting Group";
         AssetStagingRec."Location Code" := PurchRcptLine."Location Code";
         AssetStagingRec.Quantity := PurchaseLine.Quantity;
@@ -108,6 +111,10 @@ codeunit 50028 "E3 Asset Capatlization"
         AssetStagingRec."Detailed Entry No." := 0;
         AssetStagingRec."Vendor Invoice No." := PurchaseHeader."Vendor Invoice No.";
         AssetStagingRec."Department Id" := PurchaseHeader."Shortcut Dimension 2 Code";
+        AssetStagingRec."Amount/Qty" := PurchaseLine."Line Amount" / PurchRcptLine.Quantity;
+        Evaluate(GSTPercent, PurchaseLine."GST Group Code");
+        if AssetStagingRec."GST Credit" = "GST Credit"::"Non-Availment" then
+            AssetStagingRec."GST Amount" := PurchaseLine."Line Amount" * GSTPercent / 100;
 
         AssetStagingRec.Insert();
         //    end
@@ -181,12 +188,18 @@ codeunit 50028 "E3 Asset Capatlization"
                     "E3 Capitalization Type"::One2Many:
                         begin
                             Item.Get(AssetDetailsRef."No.");
-                            AssetGroup.Get(Item."E3 Assets Group");
+                            AssetGroup.Get(Item."E3 Assets Group", AssetDetailsRef."Location Code");
                             if (AssetGroup."Number Sequence" <> '') then begin
                                 AssetDetailsRef."Assets Reference" := NoSeqMgmt.GetNextNo(AssetGroup."Number Sequence");
                                 // AssetDetailsRef."Assets Name" := AssetGroup."Default Assets Name";
                                 AssetDetailsRef."Asset Reference Created" := true;
                                 AssetDetailsRef."FA Sub Class" := AssetGroup."FA Sub Class";
+                                AssetDetailsRef."Depreciation Years" := AssetGroup."Depreciation Years";
+                                AssetDetailsRef."Depreciation %" := AssetGroup."Depreciation %";
+                                AssetDetailsRef."Depreciation Method" := AssetGroup."Depreciation Method";
+                                AssetDetailsRef."Put to use Date (ITSM)" := 0D;
+                                AssetDetailsRef."Asset uniqe ID (ITSM)" := '';
+                                AssetDetailsRef.AssetCreated := false;
                                 AssetDetailsRef.Modify(true);
                             end else
                                 Message('Number sequence setup is missed for %1 Asset Group', AssetGroup.AssetsGroup);
@@ -194,7 +207,7 @@ codeunit 50028 "E3 Asset Capatlization"
                     "E3 Capitalization Type"::Many2One:
                         begin
                             Item.Get(AssetDetailsRef."No.");
-                            AssetGroup.Get(Item."E3 Assets Group");
+                            AssetGroup.Get(Item."E3 Assets Group", AssetDetailsRef."Location Code");
                             if (AssetGroup."Number Sequence" <> '') then begin
                                 NextNo := NoSeqMgmt.GetNextNo(AssetGroup."Number Sequence");
                                 AssetDetailsM2O.SetRange("PO No.", AssetDetailsRef."PO No.");
@@ -207,6 +220,12 @@ codeunit 50028 "E3 Asset Capatlization"
                                         // AssetDetailsM2O."Assets Name" := AssetGroup."Default Assets Name";
                                         AssetDetailsM2O."Asset Reference Created" := true;
                                         AssetDetailsM2O."FA Sub Class" := AssetGroup."FA Sub Class";
+                                        AssetDetailsM2O."Depreciation Years" := AssetGroup."Depreciation Years";
+                                        AssetDetailsM2O."Depreciation %" := AssetGroup."Depreciation %";
+                                        AssetDetailsM2O."Depreciation Method" := AssetGroup."Depreciation Method";
+                                        AssetDetailsM2O."Put to use Date (ITSM)" := 0D;
+                                        AssetDetailsM2O."Asset uniqe ID (ITSM)" := '';
+                                        AssetDetailsM2O.AssetCreated := false;
                                         AssetDetailsM2O.Modify(true);
                                     until AssetDetailsM2O.Next() = 0;
                             end else
@@ -227,7 +246,7 @@ codeunit 50028 "E3 Asset Capatlization"
         AssetStagingInsert.SetRange("Asset Details Created", false);
         if AssetStagingInsert.FindSet() then
             repeat
-                case AssetStagingInsert."E3 Capitalization Type" of
+                case AssetStagingInsert."Capitalization Type" of
                     "E3 Capitalization Type"::One2Many:
                         One2ManyInsert(AssetStagingInsert);
                     "E3 Capitalization Type"::Many2One:
@@ -263,7 +282,7 @@ codeunit 50028 "E3 Asset Capatlization"
             AssetDetailsInsert."Asset Group" := AssetsStaging."Asset Group";
             AssetDetailsInsert.Quantity := 1;
             AssetDetailsInsert."Unit of Measure" := AssetsStaging."Unit of Measure";
-            AssetDetailsInsert."Capitalization Type" := AssetsStaging."E3 Capitalization Type";
+            AssetDetailsInsert."Capitalization Type" := AssetsStaging."Capitalization Type";
             AssetDetailsInsert."Location Code" := AssetsStaging."Location Code";
             AssetDetailsInsert."Assets Reference" := '';
             AssetDetailsInsert."Asset Reference Created" := false;
@@ -273,6 +292,10 @@ codeunit 50028 "E3 Asset Capatlization"
             AssetDetailsInsert.ITSMSend := false;
             AssetDetailsInsert."Department Id" := AssetsStaging."Department Id";
             AssetDetailsInsert.Amount := AssetsStaging."Line Amount";
+            AssetDetailsInsert."Amount/Qty" := AssetsStaging."Amount/Qty";
+            AssetDetailsInsert."GST Amount" := AssetsStaging."GST Amount" / AssetsStaging."Quantity Received";
+            AssetDetailsInsert."Put to use Date (ITSM)" := 0D;
+            AssetDetailsInsert."Asset uniqe ID (ITSM)" := '';
             AssetDetailsInsert.Insert();
             //  AssetsGroup.Get(AssetsStaging."Asset Group");
         end;
@@ -292,7 +315,7 @@ codeunit 50028 "E3 Asset Capatlization"
         AssetstagingM2O.Reset();
         AssetstagingM2O.SetRange("Capex Id", AssetsStaging."Capex Id");
         AssetstagingM2O.SetRange("Asset Details Created", false);
-        AssetstagingM2O.SetRange("E3 Capitalization Type", AssetsStaging."E3 Capitalization Type");
+        AssetstagingM2O.SetRange("Capitalization Type", AssetsStaging."Capitalization Type");
 
         if AssetstagingM2O.FindFirst() then begin
             // Get next Entry No.
@@ -316,7 +339,7 @@ codeunit 50028 "E3 Asset Capatlization"
             AssetDetailsInsert."Asset Group" := AssetstagingM2O."Asset Group";
             AssetDetailsInsert.Quantity := 1;
             AssetDetailsInsert."Unit of Measure" := AssetstagingM2O."Unit of Measure";
-            AssetDetailsInsert."Capitalization Type" := AssetstagingM2O."E3 Capitalization Type";
+            AssetDetailsInsert."Capitalization Type" := AssetstagingM2O."Capitalization Type";
             AssetDetailsInsert."Location Code" := AssetstagingM2O."Location Code";
             AssetDetailsInsert."Assets Reference" := '';
             AssetDetailsInsert."Asset Reference Created" := false;
@@ -326,12 +349,16 @@ codeunit 50028 "E3 Asset Capatlization"
             AssetDetailsInsert.ITSMSend := false;
             AssetDetailsInsert."Department Id" := AssetstagingM2O."Department Id";
             AssetDetailsInsert.Amount := AssetstagingM2O."Line Amount";
+            AssetDetailsInsert."Amount/Qty" := AssetstagingM2O."Line Amount";
+            AssetDetailsInsert."GST Amount" := AssetstagingM2O."GST Amount";
+            AssetDetailsInsert."Put to use Date (ITSM)" := 0D;
+            AssetDetailsInsert."Asset uniqe ID (ITSM)" := '';
             AssetDetailsInsert.Insert();
             // Update all related staging records (Many → One)
             Assetstg.Reset();
             Assetstg.SetRange("Capex Id", AssetstagingM2O."Capex Id");
             Assetstg.SetRange("Asset Details Created", false);
-            Assetstg.SetRange("E3 Capitalization Type", AssetstagingM2O."E3 Capitalization Type");
+            Assetstg.SetRange("Capitalization Type", AssetstagingM2O."Capitalization Type");
             if Assetstg.FindSet() then
                 repeat
                     Assetstg."Asset Details Created" := true;
@@ -364,9 +391,14 @@ codeunit 50028 "E3 Asset Capatlization"
         FADepBook.Init();
         FADepBook."FA No." := FixedAsset."No.";
         FADepBook."Depreciation Book Code" := 'COMPANY';
-        FADepBook."Depreciation Method" := FADepBook."Depreciation Method"::"Straight-Line";
+        FADepBook."Depreciation Method" := E3_Assetdetails."Depreciation Method";
         FADepBook."Depreciation Starting Date" := E3_Assetdetails."Put to use Date (ITSM)";
-        FADepBook."No. of Depreciation Years" := 5;
+        FADepBook."No. of Depreciation Years" := E3_Assetdetails."Depreciation Years";
+        if (E3_Assetdetails."Depreciation Method" = "FA Depreciation Method"::"Declining-Balance 1") then
+            FADepBook."Declining-Balance %" := E3_Assetdetails."Depreciation %";
+        if (E3_Assetdetails."Depreciation Method" = "FA Depreciation Method"::"Straight-Line") then
+            FADepBook."Straight-Line %" := E3_Assetdetails."Depreciation %";
+        FADepBook."FA Posting Group" := FASubclass."Default FA Posting Group";
         FADepBook.Insert(true);
         E3_Assetdetails.AssetCreated := true;
         E3_Assetdetails.Modify();
@@ -374,6 +406,94 @@ codeunit 50028 "E3 Asset Capatlization"
     end;
 
     procedure CreateAndPostFAJournal(AssetDetails: Record "E3 Assets Details")
+    var
+        GenJnlLine: Record "Gen. Journal Line";
+        GenJnlBatch: Record "Gen. Journal Batch";
+        FixedAsset: Record "Fixed Asset";
+        NoSeriesMgt: Codeunit "No. Series";
+        FAPostingGroup: Record "FA Posting Group";
+        NextDocNo: Code[20];
+        LineNo: Integer;
+        DimMgt: Codeunit DimensionManagement;
+        ShortcutDimCode: array[8] of Code[20];
+        GenPostingSetup: Record "General Posting Setup";
+        vendor: Record Vendor;
+        Item: Record Item;
+    begin
+        // Get Fixed Asset
+        FixedAsset.Get(AssetDetails."Assets Reference");
+        FAPostingGroup.Reset();
+        FAPostingGroup.SetRange(Code, FixedAsset."FA Posting Group");
+        if FAPostingGroup.Find('-') then;
+
+        // Get Journal Batch
+        GenJnlBatch.Get('ASSETS', 'FAJNL-40');
+
+        // Get next document number
+        if GenJnlBatch."No. Series" <> '' then
+            NextDocNo := NoSeriesMgt.GetNextNo(GenJnlBatch."No. Series", Today(), true);
+
+        // Find next line number
+        GenJnlLine.Reset();
+        GenJnlLine.SetRange("Journal Template Name", GenJnlBatch."Journal Template Name");
+        GenJnlLine.SetRange("Journal Batch Name", GenJnlBatch.Name);
+
+        if GenJnlLine.FindLast() then
+            LineNo := GenJnlLine."Line No." + 10000
+        else
+            LineNo := 10000;
+
+        vendor.Get(AssetDetails."Vendor No.");
+        Item.Get(AssetDetails."No.");
+        GenPostingSetup.Reset();
+        GenPostingSetup.SetRange("Gen. Bus. Posting Group", vendor."Gen. Bus. Posting Group");
+        GenPostingSetup.SetRange("Gen. Prod. Posting Group", Item."Gen. Prod. Posting Group");
+        if GenPostingSetup.Find('-') Then;
+
+        // Create Journal Line
+        GenJnlLine.Init();
+        GenJnlLine.Validate("Journal Template Name", GenJnlBatch."Journal Template Name");
+        GenJnlLine.Validate("Journal Batch Name", GenJnlBatch.Name);
+
+        // GenJnlLine.Validate(sho);
+
+        GenJnlLine."Line No." := LineNo;
+
+        GenJnlLine.Validate("Posting Date", Today());
+        GenJnlLine.Validate("Document No.", NextDocNo);
+
+        // Fixed Asset
+        GenJnlLine.Validate("Account Type", GenJnlLine."Account Type"::"Fixed Asset");
+        GenJnlLine.Validate("Account No.", AssetDetails."Assets Reference");
+
+
+        // FA Posting Type
+        GenJnlLine.Validate("FA Posting Type", GenJnlLine."FA Posting Type"::"Acquisition Cost");
+
+        // Amount
+        GenJnlLine.Validate(Amount, AssetDetails."Amount/Qty" + AssetDetails."GST Amount");
+
+        // Balancing Account
+        GenJnlLine.Validate("Bal. Account Type", GenJnlLine."Bal. Account Type"::"G/L Account");
+        GenJnlLine.Validate("Bal. Account No.", GenPostingSetup."Purch. Account");
+        ShortcutDimCode[1] := AssetDetails."Location Code";
+        DimMgt.ValidateShortcutDimValues(1, ShortcutDimCode[1], GenJnlLine."Dimension Set ID");
+
+        ShortcutDimCode[2] := AssetDetails."Department Id";
+        DimMgt.ValidateShortcutDimValues(2, ShortcutDimCode[2], GenJnlLine."Dimension Set ID");
+
+        ShortcutDimCode[7] := AssetDetails."Capex Id";
+        DimMgt.ValidateShortcutDimValues(7, ShortcutDimCode[7], GenJnlLine."Dimension Set ID");
+        GenJnlLine.Validate("Shortcut Dimension 1 Code", AssetDetails."Location Code");
+        GenJnlLine.Validate("Shortcut Dimension 2 Code", AssetDetails."Department Id");
+
+        GenJnlLine.Insert(true);
+
+        Message('Fixed Asset Journal created with Document No. %1 for Asset %2',
+            NextDocNo, AssetDetails."Assets Reference");
+    end;
+
+    procedure CreateAndPostFAJournal_Old(AssetDetails: Record "E3 Assets Details")
     var
         FAJnlLine: Record "FA Journal Line";
         FAJnlPost: Codeunit "FA Jnl.-Post Line";

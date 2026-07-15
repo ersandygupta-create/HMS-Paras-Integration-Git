@@ -54,7 +54,7 @@ table 50030 "E3 Asset Staging"
             Caption = 'Asset Group';
             Editable = false;
         }
-        field(12; "E3 Capitalization Type"; Enum "E3 Capitalization Type")
+        field(12; "Capitalization Type"; Enum "E3 Capitalization Type")
         {
             Caption = 'Capitalization Type';
             Editable = false;
@@ -172,6 +172,26 @@ table 50030 "E3 Asset Staging"
         field(35; "Department Id"; Code[20])
         {
             Caption = 'Department Id';
+        }
+        field(46; "Depreciation Years"; Integer)
+        {
+            Caption = 'Depreciation Years';
+        }
+        field(47; "Depreciation Method"; Enum "FA Depreciation Method")
+        {
+            Caption = 'Depreciation Method';
+        }
+        field(48; "Depreciation %"; Decimal)
+        {
+            Caption = 'Depreciation %';
+        }
+        field(49; "Amount/Qty"; Decimal)
+        {
+            Caption = 'Amount per FA';
+        }
+        field(50; "GST Amount"; Decimal)
+        {
+            Caption = 'GST Amount';
         }
     }
     keys

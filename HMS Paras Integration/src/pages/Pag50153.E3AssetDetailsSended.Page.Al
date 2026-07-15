@@ -129,12 +129,19 @@ page 50153 "E3 Asset Details Sent"
                     ApplicationArea = All;
                     ToolTip = 'Specify Assets Name';
                 }
-                field(Amount; Rec.Amount)
+                field(Amount; rec."Amount/Qty")
                 {
                     ApplicationArea = All;
                     ToolTip = 'Specify Amount';
                     Editable = false;
                     DecimalPlaces = 2;
+                }
+                field("GST Amount"; Rec."GST Amount")
+                {
+                    ApplicationArea = all;
+                    Editable = false;
+                    ToolTip = 'Specifies GST Amount';
+
                 }
                 field("Put to use Date"; rec."Put to use Date (ITSM)")
                 {
@@ -179,11 +186,20 @@ page 50153 "E3 Asset Details Sent"
                 trigger OnAction()
                 var
                     AssetCU: Codeunit "E3 Asset Capatlization";
+                    E3AssetsDetails: Record "E3 Assets Details";
                 begin
-                    if not Rec.AssetCreated and (Rec."Put to use Date (ITSM)" <> 0D) then
-                        AssetCU.CreateFixedAsset(Rec) else
-                        Message('Asset card is already created or Put to use date is not specified');
+                    E3AssetsDetails := Rec;
+                    CurrPage.SetSelectionFilter(E3AssetsDetails);
+                    if E3AssetsDetails.FindSet() then
+                        repeat
+                            if not Rec.AssetCreated and (Rec."Put to use Date (ITSM)" <> 0D) then
+                                AssetCU.CreateFixedAsset(Rec)
+                            else
+                                Message('Asset card is already created or Put to use date is not specified');
+                        until E3AssetsDetails.Next() = 0;
+
                 end;
+
             }
 
             action(CreateJournal)
@@ -194,11 +210,18 @@ page 50153 "E3 Asset Details Sent"
                 trigger OnAction()
                 var
                     AssetCU: Codeunit "E3 Asset Capatlization";
+                    E3AssetsDetails: Record "E3 Assets Details";
                 begin
-                    if Rec.AssetCreated and (Rec."Assets Reference" <> '') then
-                        AssetCU.CreateAndPostFAJournal(Rec)
-                    else
-                        Message('Asset card is not created or Assets Reference is not specified');
+                    E3AssetsDetails := Rec;
+                    CurrPage.SetSelectionFilter(E3AssetsDetails);
+                    if E3AssetsDetails.FindSet() then
+                        repeat
+                            if Rec.AssetCreated and (Rec."Assets Reference" <> '') then
+                                AssetCU.CreateAndPostFAJournal(E3AssetsDetails)
+                            else
+                                Message('Asset card is not created or Assets Reference is not specified');
+                        until E3AssetsDetails.Next() = 0;
+
                 end;
             }
             action(OpenFixedAsset)

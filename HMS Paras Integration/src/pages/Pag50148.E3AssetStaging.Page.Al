@@ -83,7 +83,7 @@ page 50148 "E3 Asset Staging"
                     ToolTip = 'Specifies the asset group.';
                     Editable = false;
                 }
-                field("Capitalization Type"; Rec."E3 Capitalization Type")
+                field("Capitalization Type"; Rec."Capitalization Type")
                 {
                     ApplicationArea = All;
                     ToolTip = 'Specifies the capitalization type.';

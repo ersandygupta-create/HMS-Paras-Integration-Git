@@ -30,6 +30,11 @@ page 50150 "E3 Assets Group"
                     Caption = 'Default Assets Name';
                     ToolTip = 'Specifies Default Assets Name';
                 }
+                field("Location Code"; Rec."Location Code")
+                {
+                    Caption = 'Location Code';
+                    ToolTip = 'Specifies Location Code';
+                }
                 field("Number Sequence"; Rec."Number Sequence")
                 {
                     Caption = 'No. Sequnce';
@@ -39,6 +44,21 @@ page 50150 "E3 Assets Group"
                 {
                     Caption = 'FA Sub Class';
                     ToolTip = 'Specifies FA Sub Class';
+                }
+                field("Depreciation Years"; Rec."Depreciation Years")
+                {
+                    Caption = 'Depreciation Years';
+                    ToolTip = 'Depreciation Years';
+                }
+                field("Depreciation Method"; Rec."Depreciation Method")
+                {
+                    Caption = 'Depreciation Method';
+                    ToolTip = 'Depreciation Method';
+                }
+                field("Depreciation %"; Rec."Depreciation %")
+                {
+                    Caption = 'Depreciation %';
+                    ToolTip = 'Depreciation %';
                 }
             }
         }

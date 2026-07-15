@@ -89,7 +89,7 @@ page 50152 "E3 Asset Staging Generated"
                     ToolTip = 'Specifies the Department Id.';
                     Editable = true;
                 }
-                field("Capitalization Type"; Rec."E3 Capitalization Type")
+                field("Capitalization Type"; Rec."Capitalization Type")
                 {
                     ApplicationArea = All;
                     ToolTip = 'Specifies the capitalization type.';
@@ -130,6 +130,13 @@ page 50152 "E3 Asset Staging Generated"
                     ApplicationArea = All;
                     Editable = false;
                     ToolTip = 'Specifies the line amount.';
+                }
+                field("GST Amount"; Rec."GST Amount")
+                {
+                    ApplicationArea = all;
+                    Editable = false;
+                    ToolTip = 'Specifies GST Amount';
+
                 }
                 field("Line Discount Per"; Rec."Line Discount Per")
                 {
