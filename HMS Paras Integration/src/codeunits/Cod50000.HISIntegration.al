@@ -595,7 +595,8 @@ codeunit 50000 "EDC HIS Integration Mgmt."
             until temRevenueStaging.Next() = 0;
     end;
 
-    procedure CollectionHISDocumentDateValidation(HISRevenueStaging: Record "EDC HIS Revenue Staging Table"): Boolean
+    procedure CollectionHISDocumentDateValidation(
+    HISRevenueStaging: Record "EDC HIS Revenue Staging Table"): Boolean
     var
         AllowPostingDate: Record "HIS Allow Posting Date";
         DocDate: Date;
@@ -604,16 +605,10 @@ codeunit 50000 "EDC HIS Integration Mgmt."
 
         AllowPostingDate.Reset();
         AllowPostingDate.SetRange("Code Unit Name", '50003');
-
         AllowPostingDate.SetFilter("From Date", '<=%1', DocDate);
         AllowPostingDate.SetFilter("To Date", '>=%1', DocDate);
 
-        if not AllowPostingDate.FindFirst() then begin
-            message('Document Date %1 is not allowed. Allowed date range not defined for %2.', DocDate, '50003 Table Allow Integration Setup From date and To Date');
-            EXIT(TRUE);
-        end
-        else
-            EXIT(FALSE);
+        exit(AllowPostingDate.FindFirst());
     end;
 
     procedure InitGenJnlLineRevenueStaging()
@@ -621,6 +616,10 @@ codeunit 50000 "EDC HIS Integration Mgmt."
         GenJournalLine: Record "Gen. Journal Line";
         HISGLAccountMapping: Record "EDC HIS GL Accounts Mapping";
         intLineNo: Integer;
+        MOPAccountType: Enum "Gen. Journal Account Type";
+        MOPAccountNo: Code[20];
+        CollectionAccountType: Enum "Gen. Journal Account Type";
+        CollectionAccountNo: Code[20];
         MOPLbl: Label 'MOP Setup not found for Mode of payment %1.';
         DocumentTypeLbl: Label 'Setup not found for Document Type %1.';
     begin
@@ -644,119 +643,133 @@ codeunit 50000 "EDC HIS Integration Mgmt."
         HISRevenueStaging.SETFILTER(HISRevenueStaging.Amount, '<>%1', 0);
         //HISRevenueStaging.SetFilter("Error Description", '%1', '');
         //HISRevenueStaging.SETFILTER(HISRevenueStaging."Account No.", '<>%1', '');
+
         IF HISRevenueStaging.FINDSET() THEN
-            if not CollectionHISDocumentDateValidation(HISRevenueStaging) then begin
-                REPEAT
-                    GenJournalLine.RESET();
-                    GenJournalLine.SETRANGE("Journal Template Name", IntegrationSetupLine."General Journal Template Code");
-                    GenJournalLine.SETRANGE("Journal Batch Name", IntegrationSetupLine."General Journal Batch Code");
-                    IF GenJournalLine.FINDLAST() THEN
-                        intLineNo := GenJournalLine."Line No."
-                    ELSE
-                        intLineNo := 10000;
+            REPEAT
 
-                    GenJournalLine.INIT();
-                    GenJournalLine.VALIDATE(GenJournalLine."Journal Template Name", IntegrationSetupLine."General Journal Template Code");
-                    GenJournalLine.VALIDATE(GenJournalLine."Journal Batch Name", IntegrationSetupLine."General Journal Batch Code");
-                    intLineNo += 10000;
-                    GenJournalLine."Line No." := intLineNo;
-                    GenJournalLine.VALIDATE("Document Type", HISRevenueStaging."Document Type");
-                    GenJournalLine.VALIDATE("Document No.", HISRevenueStaging."Document No.");
-                    GenJournalLine.VALIDATE("Posting Date", HISRevenueStaging."Document Date");
+                // Check Document Date
+                IF CollectionHISDocumentDateValidation(HISRevenueStaging) THEN BEGIN
 
+                    // Check MOP Setup
                     HISGLAccountMapping.Reset();
                     HISGLAccountMapping.SetRange(Type, HISGLAccountMapping.Type::MOP);
                     HISGLAccountMapping.SetRange("MOP Code", HISRevenueStaging."Mode of Payment");
-                    if HISGLAccountMapping.FindFirst() then begin
 
-                        GenJournalLine.VALIDATE("Account Type", HISGLAccountMapping."Account Type");
-                        GenJournalLine.VALIDATE("Account No.", HISGLAccountMapping."Account No.");
-                    end ELSE
-                        Error(MOPLbl, HISRevenueStaging."Mode of Payment");
+                    IF HISGLAccountMapping.FindFirst() THEN BEGIN
 
-                    GenJournalLine.VALIDATE(Amount, HISRevenueStaging.Amount);
-                    GenJournalLine.VALIDATE("Bal. Account Type", GenJournalLine."Bal. Account Type"::"G/L Account");
-                    GenJournalLine.VALIDATE("Cheque Date", HISRevenueStaging."Cheque Date");
-                    GenJournalLine.VALIDATE("Cheque No.", COPYSTR(HISRevenueStaging."Cheque No.", 1, 10));
-                    if HISRevenueStaging."Shortcut Dimension 1 Code" <> '' then begin
-                        GenJournalLine.VALIDATE("Location Code", HISRevenueStaging."Shortcut Dimension 1 Code");
-                        GenJournalLine.VALIDATE("Shortcut Dimension 1 Code", HISRevenueStaging."Shortcut Dimension 1 Code");
-                    end;
+                        MOPAccountType := HISGLAccountMapping."Account Type";
+                        MOPAccountNo := HISGLAccountMapping."Account No.";
 
-                    if HISRevenueStaging."Shortcut Dimension 1 Code" <> '' then
-                        GenJournalLine.VALIDATE("Shortcut Dimension 2 Code", GetMappedDimension(HISRevenueStaging."Shortcut Dimension 2 Code"));
+                        // Check Collection Setup
+                        HISGLAccountMapping.Reset();
+                        HISGLAccountMapping.SetRange(Type, HISGLAccountMapping.Type::Collection);
+                        HISGLAccountMapping.SetRange("Service/Station Head", HISRevenueStaging."HIS Document Type");
 
-                    GenJournalLine.VALIDATE("External Document No.", HISRevenueStaging."Cheque No.");
-                    GenJournalLine."EDC Narration" := COPYSTR(HISRevenueStaging."Line Narration", 1, 50);
-                    GenJournalLine."EDC HIS Module" := HISRevenueStaging."HIS Module";
-                    GenJournalLine."EDC HIS Document Type" := COPYSTR(HISRevenueStaging."HIS Document Type", 1, 60);
-                    GenJournalLine."EDC UTR No." := HISRevenueStaging."Cheque No.";
-                    GenJournalLine."EDC Sub Group Code" := HISRevenueStaging."Sub Group";
-                    GenJournalLine."EDC Receipt No." := COPYSTR(HISRevenueStaging."Receipt No.", 1, 20);
-                    GenJournalLine."EDC UHID" := HISRevenueStaging.UHID;
-                    GenJournalLine."EDC Validation Key" := HISRevenueStaging."Validation HIS Key";
-                    GenJournalLine."EDC Store Code" := HISRevenueStaging."Store Code";
-                    GenJournalLine."EDC Patient Name" := HISRevenueStaging."Patient Name";
-                    GenJournalLine."EDC Transaction Type" := HISRevenueStaging.TRANSACTION_TYPE;
-                    GenJournalLine."EDC Encounter No." := HISRevenueStaging."Encounter No.";
-                    GenJournalLine.INSERT();
+                        IF HISGLAccountMapping.FindFirst() THEN BEGIN
 
-                    GenJournalLine.INIT();
-                    GenJournalLine.VALIDATE(GenJournalLine."Journal Template Name", IntegrationSetupLine."General Journal Template Code");
-                    GenJournalLine.VALIDATE(GenJournalLine."Journal Batch Name", IntegrationSetupLine."General Journal Batch Code");
-                    intLineNo += 10000;
-                    GenJournalLine."Line No." := intLineNo;
-                    GenJournalLine.VALIDATE("Document Type", HISRevenueStaging."Document Type");
-                    GenJournalLine.VALIDATE("Document No.", HISRevenueStaging."Document No.");
-                    GenJournalLine.VALIDATE("Posting Date", HISRevenueStaging."Document Date");
+                            CollectionAccountType := HISGLAccountMapping."Account Type";
+                            CollectionAccountNo := HISGLAccountMapping."Account No.";
 
-                    HISGLAccountMapping.Reset();
-                    HISGLAccountMapping.SetRange(Type, HISGLAccountMapping.Type::Collection);
-                    HISGLAccountMapping.SetRange("Service/Station Head", HISRevenueStaging."HIS Document Type");
-                    if HISGLAccountMapping.FindFirst() then begin
+                            GenJournalLine.RESET();
+                            GenJournalLine.SETRANGE("Journal Template Name", IntegrationSetupLine."General Journal Template Code");
+                            GenJournalLine.SETRANGE("Journal Batch Name", IntegrationSetupLine."General Journal Batch Code");
+                            IF GenJournalLine.FINDLAST() THEN
+                                intLineNo := GenJournalLine."Line No."
+                            ELSE
+                                intLineNo := 10000;
 
-                        GenJournalLine.VALIDATE("Account Type", HISGLAccountMapping."Account Type");
-                        GenJournalLine.VALIDATE("Account No.", HISGLAccountMapping."Account No.");
-                    end ELSE
-                        Error(DocumentTypeLbl, HISRevenueStaging."HIS Document Type");
+                            GenJournalLine.INIT();
+                            GenJournalLine.VALIDATE(GenJournalLine."Journal Template Name", IntegrationSetupLine."General Journal Template Code");
+                            GenJournalLine.VALIDATE(GenJournalLine."Journal Batch Name", IntegrationSetupLine."General Journal Batch Code");
+                            intLineNo += 10000;
+                            GenJournalLine."Line No." := intLineNo;
+                            GenJournalLine.VALIDATE("Document Type", HISRevenueStaging."Document Type");
+                            GenJournalLine.VALIDATE("Document No.", HISRevenueStaging."Document No.");
+                            GenJournalLine.VALIDATE("Posting Date", HISRevenueStaging."Document Date");
 
-                    GenJournalLine.VALIDATE(Amount, -HISRevenueStaging.Amount);
-                    GenJournalLine.validate("Bal. Account Type", GenJournalLine."Bal. Account Type"::"G/L Account");
-                    GenJournalLine.VALIDATE("Cheque Date", HISRevenueStaging."Cheque Date");
-                    GenJournalLine.VALIDATE("Cheque No.", COPYSTR(HISRevenueStaging."Cheque No.", 1, 10));
-                    if HISRevenueStaging."Shortcut Dimension 1 Code" <> '' then begin
-                        GenJournalLine.VALIDATE("Location Code", HISRevenueStaging."Shortcut Dimension 1 Code");
-                        GenJournalLine.VALIDATE("Shortcut Dimension 1 Code", HISRevenueStaging."Shortcut Dimension 1 Code");
-                    end;
+                            GenJournalLine.VALIDATE("Account Type", MOPAccountType);
+                            GenJournalLine.VALIDATE("Account No.", MOPAccountNo);
 
-                    if HISRevenueStaging."Shortcut Dimension 1 Code" <> '' then
-                        GenJournalLine.VALIDATE("Shortcut Dimension 2 Code", GetMappedDimension(HISRevenueStaging."Shortcut Dimension 2 Code"));
+                            GenJournalLine.VALIDATE(Amount, HISRevenueStaging.Amount);
+                            GenJournalLine.VALIDATE("Bal. Account Type", GenJournalLine."Bal. Account Type"::"G/L Account");
+                            GenJournalLine.VALIDATE("Cheque Date", HISRevenueStaging."Cheque Date");
+                            GenJournalLine.VALIDATE("Cheque No.", COPYSTR(HISRevenueStaging."Cheque No.", 1, 10));
 
-                    GenJournalLine.VALIDATE("External Document No.", HISRevenueStaging."External Document No.");
-                    GenJournalLine."EDC Narration" := COPYSTR(HISRevenueStaging."Line Narration", 1, 50);
-                    GenJournalLine."EDC HIS Module" := HISRevenueStaging."HIS Module";
-                    GenJournalLine."EDC HIS Document Type" := COPYSTR(HISRevenueStaging."HIS Document Type", 1, 60);
-                    GenJournalLine."EDC UTR No." := HISRevenueStaging."Cheque No.";
-                    GenJournalLine."EDC Sub Group Code" := HISRevenueStaging."Sub Group";
-                    GenJournalLine."EDC Receipt No." := COPYSTR(HISRevenueStaging."Receipt No.", 1, 20);
-                    GenJournalLine."EDC UHID" := HISRevenueStaging.UHID;
-                    GenJournalLine."EDC Validation Key" := HISRevenueStaging."Validation HIS Key";
-                    GenJournalLine."EDC Store Code" := HISRevenueStaging."Store Code";
-                    GenJournalLine."EDC Patient Name" := HISRevenueStaging."Patient Name";
-                    GenJournalLine."EDC Transaction Type" := HISRevenueStaging.TRANSACTION_TYPE;
-                    GenJournalLine."EDC Encounter No." := HISRevenueStaging."Encounter No.";
-                    GenJournalLine.INSERT();
+                            if HISRevenueStaging."Shortcut Dimension 1 Code" <> '' then begin
+                                GenJournalLine.VALIDATE("Location Code", HISRevenueStaging."Shortcut Dimension 1 Code");
+                                GenJournalLine.VALIDATE("Shortcut Dimension 1 Code", HISRevenueStaging."Shortcut Dimension 1 Code");
+                            end;
 
-                    HISRevenueStaging."Created By" := USERID;
-                    HISRevenueStaging."Created Date Time" := CURRENTDATETIME;
-                    HISRevenueStaging."General Entries Created" := TRUE;
-                    HISRevenueStaging.MODIFY();
-                UNTIL HISRevenueStaging.NEXT() = 0;
-            end;
+                            if HISRevenueStaging."Shortcut Dimension 1 Code" <> '' then
+                                GenJournalLine.VALIDATE("Shortcut Dimension 2 Code", GetMappedDimension(HISRevenueStaging."Shortcut Dimension 2 Code"));
 
+                            GenJournalLine.VALIDATE("External Document No.", HISRevenueStaging."Cheque No.");
+                            GenJournalLine."EDC Narration" := COPYSTR(HISRevenueStaging."Line Narration", 1, 50);
+                            GenJournalLine."EDC HIS Module" := HISRevenueStaging."HIS Module";
+                            GenJournalLine."EDC HIS Document Type" := COPYSTR(HISRevenueStaging."HIS Document Type", 1, 60);
+                            GenJournalLine."EDC UTR No." := HISRevenueStaging."Cheque No.";
+                            GenJournalLine."EDC Sub Group Code" := HISRevenueStaging."Sub Group";
+                            GenJournalLine."EDC Receipt No." := COPYSTR(HISRevenueStaging."Receipt No.", 1, 20);
+                            GenJournalLine."EDC UHID" := HISRevenueStaging.UHID;
+                            GenJournalLine."EDC Validation Key" := HISRevenueStaging."Validation HIS Key";
+                            GenJournalLine."EDC Store Code" := HISRevenueStaging."Store Code";
+                            GenJournalLine."EDC Patient Name" := HISRevenueStaging."Patient Name";
+                            GenJournalLine."EDC Transaction Type" := HISRevenueStaging.TRANSACTION_TYPE;
+                            GenJournalLine."EDC Encounter No." := HISRevenueStaging."Encounter No.";
+                            GenJournalLine.INSERT();
 
-    end;
-    //ak
+                            GenJournalLine.INIT();
+                            GenJournalLine.VALIDATE(GenJournalLine."Journal Template Name", IntegrationSetupLine."General Journal Template Code");
+                            GenJournalLine.VALIDATE(GenJournalLine."Journal Batch Name", IntegrationSetupLine."General Journal Batch Code");
+                            intLineNo += 10000;
+                            GenJournalLine."Line No." := intLineNo;
+                            GenJournalLine.VALIDATE("Document Type", HISRevenueStaging."Document Type");
+                            GenJournalLine.VALIDATE("Document No.", HISRevenueStaging."Document No.");
+                            GenJournalLine.VALIDATE("Posting Date", HISRevenueStaging."Document Date");
+
+                            GenJournalLine.VALIDATE("Account Type", CollectionAccountType);
+                            GenJournalLine.VALIDATE("Account No.", CollectionAccountNo);
+
+                            GenJournalLine.VALIDATE(Amount, -HISRevenueStaging.Amount);
+                            GenJournalLine.validate("Bal. Account Type", GenJournalLine."Bal. Account Type"::"G/L Account");
+                            GenJournalLine.VALIDATE("Cheque Date", HISRevenueStaging."Cheque Date");
+                            GenJournalLine.VALIDATE("Cheque No.", COPYSTR(HISRevenueStaging."Cheque No.", 1, 10));
+
+                            if HISRevenueStaging."Shortcut Dimension 1 Code" <> '' then begin
+                                GenJournalLine.VALIDATE("Location Code", HISRevenueStaging."Shortcut Dimension 1 Code");
+                                GenJournalLine.VALIDATE("Shortcut Dimension 1 Code", HISRevenueStaging."Shortcut Dimension 1 Code");
+                            end;
+
+                            if HISRevenueStaging."Shortcut Dimension 1 Code" <> '' then
+                                GenJournalLine.VALIDATE("Shortcut Dimension 2 Code", GetMappedDimension(HISRevenueStaging."Shortcut Dimension 2 Code"));
+
+                            GenJournalLine.VALIDATE("External Document No.", HISRevenueStaging."External Document No.");
+                            GenJournalLine."EDC Narration" := COPYSTR(HISRevenueStaging."Line Narration", 1, 50);
+                            GenJournalLine."EDC HIS Module" := HISRevenueStaging."HIS Module";
+                            GenJournalLine."EDC HIS Document Type" := COPYSTR(HISRevenueStaging."HIS Document Type", 1, 60);
+                            GenJournalLine."EDC UTR No." := HISRevenueStaging."Cheque No.";
+                            GenJournalLine."EDC Sub Group Code" := HISRevenueStaging."Sub Group";
+                            GenJournalLine."EDC Receipt No." := COPYSTR(HISRevenueStaging."Receipt No.", 1, 20);
+                            GenJournalLine."EDC UHID" := HISRevenueStaging.UHID;
+                            GenJournalLine."EDC Validation Key" := HISRevenueStaging."Validation HIS Key";
+                            GenJournalLine."EDC Store Code" := HISRevenueStaging."Store Code";
+                            GenJournalLine."EDC Patient Name" := HISRevenueStaging."Patient Name";
+                            GenJournalLine."EDC Transaction Type" := HISRevenueStaging.TRANSACTION_TYPE;
+                            GenJournalLine."EDC Encounter No." := HISRevenueStaging."Encounter No.";
+                            GenJournalLine.INSERT();
+
+                            HISRevenueStaging."Created By" := USERID;
+                            HISRevenueStaging."Created Date Time" := CURRENTDATETIME;
+                            HISRevenueStaging."General Entries Created" := TRUE;
+                            HISRevenueStaging.MODIFY();
+
+                        END;
+                    END;
+                END;
+
+            UNTIL HISRevenueStaging.NEXT() = 0;
+
+    end; //ak
 
     procedure SettHISDocumentDateValidation(HISSettlementStaging: Record "EDC HIS Settlement Staging"): Boolean
     var
