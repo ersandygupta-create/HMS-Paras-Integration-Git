@@ -17,7 +17,8 @@ codeunit 50010 "EDC Post Consumption Line"
         DocumentTypeLbl: Label 'Setup not found for Entry No. %1.';
         EntryNo: Integer;
     begin
-        // Skip if Posting Date is not allowed
+
+        ConsumptionValidation();
         if ConsHISDocumentDateValidation(HISConsumptionEntry) then
             exit;
 
@@ -116,6 +117,43 @@ codeunit 50010 "EDC Post Consumption Line"
         AllowPostingDate.SetFilter("To Date", '>=%1', DocDate);
 
         exit(AllowPostingDate.FindFirst());
+    end;
+
+    procedure ConsumptionValidation()
+    var
+        TempConsumptionEntry: Record "EDC HIS Consumption Entries";
+        HISGLAccountMapping: Record "EDC HIS Item Mapping";
+        ConsumptionMappingError: Text[100];
+        PurchaseOrderMappingError: Text[100];
+    begin
+        TempConsumptionEntry.Reset();
+        TempConsumptionEntry.SetRange("General Entries Created", false);
+
+        if TempConsumptionEntry.FindSet() then
+            repeat
+                TempConsumptionEntry."Error Description" := '';
+                ConsumptionMappingError := '';
+                PurchaseOrderMappingError := '';
+
+                HISGLAccountMapping.Reset();
+                HISGLAccountMapping.SetRange("Entry Type", HISGLAccountMapping."Entry Type"::Consumption);
+                HISGLAccountMapping.SetRange("Item Category Code", TempConsumptionEntry."Item Category Code");
+                if not HISGLAccountMapping.FindFirst() then
+                    ConsumptionMappingError := StrSubstNo('Entry No. %1: Consumption mapping setup missing for Item Category %2', TempConsumptionEntry."Entry No.", TempConsumptionEntry."Item Category Code");
+
+                if TempConsumptionEntry."Item Category Code" = '' then
+                    ConsumptionMappingError := StrSubstNo('Entry No. %1: Item Category Code cannot be blank', TempConsumptionEntry."Entry No.");
+
+                HISGLAccountMapping.Reset();
+                HISGLAccountMapping.SetRange("Entry Type", HISGLAccountMapping."Entry Type"::"Purchase Order");
+                HISGLAccountMapping.SetRange("Item Category Code", TempConsumptionEntry."Item Category Code");
+                if not HISGLAccountMapping.FindFirst() then
+                    PurchaseOrderMappingError := StrSubstNo('Entry No. %1: Purchase Order mapping setup missing for Item Category %2', TempConsumptionEntry."Entry No.", TempConsumptionEntry."Item Category Code");
+                TempConsumptionEntry."Error Description" := ConsumptionMappingError + ' ' + PurchaseOrderMappingError;
+
+                TempConsumptionEntry.Modify(true);
+
+            until TempConsumptionEntry.Next() = 0;
     end;
 
 

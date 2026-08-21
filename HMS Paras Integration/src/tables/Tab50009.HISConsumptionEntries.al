@@ -399,7 +399,7 @@ table 50009 "EDC HIS Consumption Entries"
             DataClassification = CustomerContent;
             Caption = 'Payor Category';
         }
-        field(109; "Error Description"; Text[150])
+        field(109; "Error Description"; Text[250])
         {
             Caption = 'Error Description';
             DataClassification = CustomerContent;

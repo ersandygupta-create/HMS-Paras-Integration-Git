@@ -21,6 +21,7 @@ codeunit 50012 "EDC Post Revenue Line"
         CollectionAccountNo: Code[20];
     begin
         // Check Document Date
+        CollectionValidation();
         if not CollectionHISDocumentDateValidation(HISRevenueStaging) then
             exit;
 
@@ -169,6 +170,45 @@ codeunit 50012 "EDC Post Revenue Line"
         AllowPostingDate.SetFilter("To Date", '>=%1', DocDate);
 
         exit(AllowPostingDate.FindFirst());
+    end;
+
+    procedure CollectionValidation()
+    var
+        temRevenueStaging: Record "EDC HIS Revenue Staging Table";
+        GLAccountMapping: Record "EDC HIS GL Accounts Mapping";
+        MOPSetupMissing: Text[70];
+        DocumentType: Text[70];
+    begin
+        temRevenueStaging.Reset();
+        temRevenueStaging.SetRange("General Entries Created", false);
+
+        if temRevenueStaging.FindSet() then
+            repeat
+                temRevenueStaging."Error Description" := '';
+                MOPSetupMissing := '';
+                DocumentType := '';
+
+                GLAccountMapping.Reset();
+                GLAccountMapping.SetRange(Type, GLAccountMapping.Type::MOP);
+                GLAccountMapping.SetRange("MOP Code", temRevenueStaging."Mode of Payment");
+
+                if not GLAccountMapping.FindFirst() then
+                    MOPSetupMissing := StrSubstNo('MOP %1 setup missing', temRevenueStaging."Mode of Payment");
+                if temRevenueStaging."Mode of Payment" = '' then
+                    MOPSetupMissing := 'MOP can not be blank';
+
+                GLAccountMapping.Reset();
+                GLAccountMapping.SetRange(Type, GLAccountMapping.Type::Collection);
+                GLAccountMapping.SetRange("Service/Station Head", temRevenueStaging."HIS Document Type");
+                if not GLAccountMapping.FindFirst() then
+                    DocumentType := StrSubstNo('Collection Type %1 setup missing', temRevenueStaging."HIS Document Type");
+
+                if temRevenueStaging."HIS Document Type" = '' then
+                    DocumentType := 'Coll type can not be blank';
+
+                temRevenueStaging."Error Description" := CopyStr(MOPSetupMissing + ' ' + DocumentType, 1, MaxStrLen(temRevenueStaging."Error Description"));
+                temRevenueStaging.Modify(true);
+            until temRevenueStaging.Next() = 0;
     end;
 
     var
