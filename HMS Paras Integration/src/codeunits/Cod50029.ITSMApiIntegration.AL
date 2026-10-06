@@ -109,6 +109,8 @@ codeunit 50029 "E3 ITSM API Integration"
         JsonObj.Add('CompanyID', CompanyInfo.Name);
         JsonObj.Add('EntryNo', AssetDetails."Entry No.");
         JsonObj.Add('Departmentid', AssetDetails."Department Id");
+        JsonObj.Add('assetsReference', AssetDetails."Assets Reference");
+
 
         JsonObj.WriteTo(Jsonoutputs);
         Message('Asset API JSON Payload:\%1', Jsonoutputs);
