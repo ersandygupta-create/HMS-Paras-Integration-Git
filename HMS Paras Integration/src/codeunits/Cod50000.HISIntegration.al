@@ -1114,7 +1114,7 @@ codeunit 50000 "EDC HIS Integration Mgmt."
         DocDate := HISConsumptionEntry1."Posting Date";
 
         AllowPostingDate.Reset();
-        AllowPostingDate.SetRange("Code Unit Name", '50003');
+        AllowPostingDate.SetRange("Code Unit Name", '50009');
         AllowPostingDate.SetFilter("From Date", '<=%1', DocDate);
         AllowPostingDate.SetFilter("To Date", '>=%1', DocDate);
 
