@@ -18,7 +18,7 @@ codeunit 50010 "EDC Post Consumption Line"
         EntryNo: Integer;
     begin
 
-        ConsumptionValidation();
+        //ConsumptionValidation();
         if ConsHISDocumentDateValidation(HISConsumptionEntry) then
             exit;
 
