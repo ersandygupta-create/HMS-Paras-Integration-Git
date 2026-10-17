@@ -16,6 +16,11 @@ pageextension 50073 "Purch & Payable Setup" extends "Purchases & Payables Setup"
                 ApplicationArea = All;
                 ToolTip = 'Specify a GRN Vendor Code Check field.';
             }
+            field("Master Code Edit"; Rec."Master Code Edit")
+            {
+                ApplicationArea = All;
+                ToolTip = 'Specifies a value Master Code Edit Like vendor, Customer, GL Account, FA, Item';
+            }
         }
     }
 }

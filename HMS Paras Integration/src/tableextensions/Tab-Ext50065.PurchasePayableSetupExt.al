@@ -12,5 +12,11 @@ tableextension 50065 "Purch & Payable Setup" extends "Purchases & Payables Setup
             Caption = 'GRN Vendor Code Check';
             DataClassification = CustomerContent;
         }
+        field(50002; "Master Code Edit"; Boolean)
+        {
+            Caption = 'Master Code Edit';
+            DataClassification = CustomerContent;
+        }
+
     }
 }

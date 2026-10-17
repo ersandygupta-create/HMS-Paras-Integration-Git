@@ -94,10 +94,15 @@ tableextension 50000 "EDC HIS Vendor Ext" extends Vendor
 
     }
     trigger OnBeforeRename()
+    var
+        PurchPayablesSetup: Record "Purchases & Payables Setup";
     begin
-        if (Rec."No." <> xRec."No.") and (xRec."No." <> '') then
-            Error('You cannot modify the Vendor No.');
+        PurchPayablesSetup.Get();
+        if PurchPayablesSetup."Master Code Edit" then
+            if (Rec."No." <> xRec."No.") and (xRec."No." <> '') then
+                Error('You cannot modify the Vendor No.');
     end;
+
 
     // trigger OnBeforeRename()
     // begin
