@@ -43,7 +43,7 @@ codeunit 50010 "EDC Post Consumption Line"
         // 2. Get Purchase Order Mapping (Cached)
         CacheKey := Format(HISGLAccountMappingEntryType::"Purchase Order") + '|' + HISConsumptionEntry."Item Category Code";
         if not ItemMappingCache.Get(CacheKey, POGLAcc) then begin
-            POGLAcc := GetItemMapping(Enum::"EDC HIS Item Map. Entry Type"::Consumption, HISConsumptionEntry."Item Category Code");
+            POGLAcc := GetItemMapping(Enum::"EDC HIS Item Map. Entry Type"::"Purchase Order", HISConsumptionEntry."Item Category Code");//ak
             if POGLAcc = '' then
                 exit;
             ItemMappingCache.Add(CacheKey, POGLAcc);

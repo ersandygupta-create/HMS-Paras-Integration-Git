@@ -71,12 +71,18 @@ codeunit 50008 "EDC HIS Delete Document"
                     HISRevenueEntry.DeleteAll();
 
 
+                // HISConsumptionEntry.Reset();
+                // HISConsumptionEntry.SetRange("HIS Document Type", DeleteDocument."HIS Document Type");
+                // HISConsumptionEntry.SetRange("Document No.", DeleteDocument."Document No.");
+                // HISConsumptionEntry.SetRange("Posting Date", DeleteDocument."Posting Date");
+                // if HISConsumptionEntry.FindFirst() then
+                //     HISConsumptionEntry.DeleteAll();
                 HISConsumptionEntry.Reset();
                 HISConsumptionEntry.SetRange("HIS Document Type", DeleteDocument."HIS Document Type");
                 HISConsumptionEntry.SetRange("Document No.", DeleteDocument."Document No.");
                 HISConsumptionEntry.SetRange("Posting Date", DeleteDocument."Posting Date");
-                if HISConsumptionEntry.FindFirst() then
-                    HISConsumptionEntry.DeleteAll();
+                HISConsumptionEntry.SetRange("General Entries Created", true);
+                HISConsumptionEntry.ModifyAll("General Entries Created", false);
 
                 HISRevenueHeader.Reset();
                 HISRevenueHeader.SetRange("HIS Document Type", DeleteDocument."HIS Document Type");
