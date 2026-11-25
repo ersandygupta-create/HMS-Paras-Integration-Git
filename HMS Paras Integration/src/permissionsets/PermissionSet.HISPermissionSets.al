@@ -5,6 +5,8 @@ permissionset 50000 "EDC HIS Permission"
     Permissions = table "EDC HIS Consumption Entries" = X,
         tabledata "EDC Akhil Integration Setup" = RIMD,
         tabledata "EDC API Supplier Update Log" = RIMD,
+        tabledata "Data Clean-up Setup" = RIMD,
+        table "Data Clean-up Setup" = X,
         tabledata "EDC Deleted G/L Entry" = RIMD,
         tabledata "EDC HIS Consumption Entries" = RIMD,
         tabledata "EDC HIS Customer Mapping" = RIMD,

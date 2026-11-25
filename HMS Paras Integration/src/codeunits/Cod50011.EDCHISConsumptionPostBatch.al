@@ -18,6 +18,9 @@ codeunit 50011 "EDC HIS Consumption Post Batch"
     begin
         xConsumptionEntry.Reset();
         xConsumptionEntry.SetRange("General Entries Created", false);
+        xConsumptionEntry.SetCurrentKey("Posting Date");
+        xConsumptionEntry.Ascending(true);
+        // xConsumptionEntry.SetFilter("Error Description", '%1', '');
         if xConsumptionEntry.FindSet() then
             repeat
                 ConsumptionEntry := xConsumptionEntry;

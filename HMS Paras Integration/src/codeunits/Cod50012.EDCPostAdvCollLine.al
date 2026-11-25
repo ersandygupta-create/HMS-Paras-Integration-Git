@@ -1,4 +1,4 @@
-codeunit 50012 "EDC Post Revenue Line"
+/*codeunit 50012 "EDC Post Revenue Line"
 {
     TableNo = "EDC HIS Revenue Staging Table";
 
@@ -214,4 +214,218 @@ codeunit 50012 "EDC Post Revenue Line"
     var
         RevenueEntry: Record "EDC HIS Revenue Staging Table";
 
+}
+*/
+codeunit 50012 "EDC Post Revenue Line"
+{
+    TableNo = "EDC HIS Revenue Staging Table";
+
+    trigger OnRun()
+    begin
+        RevenueEntry.Copy(Rec);
+        ProcessLine(RevenueEntry);
+        Rec := RevenueEntry;
+    end;
+
+    local procedure ProcessLine(var HISRevenueStaging: Record "EDC HIS Revenue Staging Table")
+    var
+        GenJournalLine: Record "Gen. Journal Line";
+        HISGLAccountMapping: Record "EDC HIS GL Accounts Mapping";
+        GenJnlPostLine: Codeunit "Gen. Jnl.-Post Line";
+        LGeneralLedgerSetup: Record "General Ledger Setup";
+        EntryNo: Integer;
+        MOPAccountType: Enum "Gen. Journal Account Type";
+        MOPAccountNo: Code[20];
+        CollectionAccountType: Enum "Gen. Journal Account Type";
+        CollectionAccountNo: Code[20];
+        MappedDimension: Code[20];
+        ShortcutDim1Code: Code[20];
+    begin
+        // 1. Quick single-record validation check instead of looping all records
+        if not CollectionHISDocumentDateValidation(HISRevenueStaging) then
+            exit;
+
+        // Cache GL Setup once
+        LGeneralLedgerSetup.Get();
+
+        // 2. Check MOP Setup
+        HISGLAccountMapping.Reset();
+        HISGLAccountMapping.SetRange(Type, HISGLAccountMapping.Type::MOP);
+        HISGLAccountMapping.SetRange("MOP Code", HISRevenueStaging."Mode of Payment");
+        if not HISGLAccountMapping.FindFirst() then
+            exit;
+
+        MOPAccountType := HISGLAccountMapping."Account Type";
+        MOPAccountNo := HISGLAccountMapping."Account No.";
+
+        // 3. Check Collection Setup
+        HISGLAccountMapping.Reset();
+        HISGLAccountMapping.SetRange(Type, HISGLAccountMapping.Type::Collection);
+        HISGLAccountMapping.SetRange("Service/Station Head", HISRevenueStaging."HIS Document Type");
+        if not HISGLAccountMapping.FindFirst() then
+            exit;
+
+        CollectionAccountType := HISGLAccountMapping."Account Type";
+        CollectionAccountNo := HISGLAccountMapping."Account No.";
+
+        // Pre-fetch Mapped Dimension if needed
+        ShortcutDim1Code := HISRevenueStaging."Shortcut Dimension 1 Code";
+        if ShortcutDim1Code <> '' then
+            MappedDimension := GetCachedMappedDimension(LGeneralLedgerSetup."Global Dimension 2 Code", HISRevenueStaging."Shortcut Dimension 2 Code");
+
+        // --- MOP Journal Entry ---
+        GenJournalLine.Init();
+        GenJournalLine.Validate("Document Type", HISRevenueStaging."Document Type");
+        GenJournalLine.Validate("Document No.", HISRevenueStaging."Document No.");
+        GenJournalLine.Validate("Posting Date", HISRevenueStaging."Document Date");
+        GenJournalLine.Validate("Account Type", MOPAccountType);
+        GenJournalLine.Validate("Account No.", MOPAccountNo);
+        GenJournalLine.Validate(Amount, HISRevenueStaging.Amount);
+        GenJournalLine.Validate("Bal. Account Type", GenJournalLine."Bal. Account Type"::"G/L Account");
+        GenJournalLine.Validate("Cheque Date", HISRevenueStaging."Cheque Date");
+        GenJournalLine.Validate("Cheque No.", CopyStr(HISRevenueStaging."Cheque No.", 1, 10));
+
+        if ShortcutDim1Code <> '' then begin
+            GenJournalLine.Validate("Location Code", ShortcutDim1Code);
+            GenJournalLine.Validate("Shortcut Dimension 1 Code", ShortcutDim1Code);
+        end;
+
+        if MappedDimension <> '' then
+            GenJournalLine.Validate("Shortcut Dimension 2 Code", MappedDimension);
+
+        GenJournalLine.Validate("External Document No.", HISRevenueStaging."Cheque No.");
+        GenJournalLine."EDC Narration" := CopyStr(HISRevenueStaging."Line Narration", 1, 50);
+        GenJournalLine."EDC HIS Module" := HISRevenueStaging."HIS Module";
+        GenJournalLine."EDC HIS Document Type" := CopyStr(HISRevenueStaging."HIS Document Type", 1, 60);
+        GenJournalLine."EDC UTR No." := HISRevenueStaging."Cheque No.";
+        GenJournalLine."EDC Sub Group Code" := HISRevenueStaging."Sub Group";
+        GenJournalLine."EDC Receipt No." := CopyStr(HISRevenueStaging."Receipt No.", 1, 20);
+        GenJournalLine."EDC UHID" := HISRevenueStaging.UHID;
+        GenJournalLine."EDC Validation Key" := HISRevenueStaging."Validation HIS Key";
+        GenJournalLine."EDC Store Code" := HISRevenueStaging."Store Code";
+        GenJournalLine."EDC Patient Name" := HISRevenueStaging."Patient Name";
+        GenJournalLine."EDC Transaction Type" := HISRevenueStaging.TRANSACTION_TYPE;
+        GenJournalLine."EDC Encounter No." := HISRevenueStaging."Encounter No.";
+
+        EntryNo := GenJnlPostLine.RunWithCheck(GenJournalLine);
+
+        // --- Collection Journal Entry ---
+        Clear(GenJournalLine);
+        GenJournalLine.Init();
+        GenJournalLine.Validate("Document Type", HISRevenueStaging."Document Type");
+        GenJournalLine.Validate("Document No.", HISRevenueStaging."Document No.");
+        GenJournalLine.Validate("Posting Date", HISRevenueStaging."Document Date");
+        GenJournalLine.Validate("Account Type", CollectionAccountType);
+        GenJournalLine.Validate("Account No.", CollectionAccountNo);
+        GenJournalLine.Validate(Amount, -HISRevenueStaging.Amount);
+        GenJournalLine.Validate("Bal. Account Type", GenJournalLine."Bal. Account Type"::"G/L Account");
+        GenJournalLine.Validate("Cheque Date", HISRevenueStaging."Cheque Date");
+        GenJournalLine.Validate("Cheque No.", CopyStr(HISRevenueStaging."Cheque No.", 1, 10));
+
+        if ShortcutDim1Code <> '' then begin
+            GenJournalLine.Validate("Location Code", ShortcutDim1Code);
+            GenJournalLine.Validate("Shortcut Dimension 1 Code", ShortcutDim1Code);
+        end;
+
+        if MappedDimension <> '' then
+            GenJournalLine.Validate("Shortcut Dimension 2 Code", MappedDimension);
+
+        GenJournalLine.Validate("External Document No.", HISRevenueStaging."External Document No.");
+        GenJournalLine."EDC Narration" := CopyStr(HISRevenueStaging."Line Narration", 1, 50);
+        GenJournalLine."EDC HIS Module" := HISRevenueStaging."HIS Module";
+        GenJournalLine."EDC HIS Document Type" := CopyStr(HISRevenueStaging."HIS Document Type", 1, 60);
+        GenJournalLine."EDC UTR No." := HISRevenueStaging."Cheque No.";
+        GenJournalLine."EDC Sub Group Code" := HISRevenueStaging."Sub Group";
+        GenJournalLine."EDC Receipt No." := CopyStr(HISRevenueStaging."Receipt No.", 1, 20);
+        GenJournalLine."EDC UHID" := HISRevenueStaging.UHID;
+        GenJournalLine."EDC Validation Key" := HISRevenueStaging."Validation HIS Key";
+        GenJournalLine."EDC Store Code" := HISRevenueStaging."Store Code";
+        GenJournalLine."EDC Patient Name" := HISRevenueStaging."Patient Name";
+        GenJournalLine."EDC Transaction Type" := HISRevenueStaging.TRANSACTION_TYPE;
+        GenJournalLine."EDC Encounter No." := HISRevenueStaging."Encounter No.";
+
+        EntryNo := GenJnlPostLine.RunWithCheck(GenJournalLine);
+
+        // --- Update Staging Record ---
+        if EntryNo <> 0 then begin
+            HISRevenueStaging."Created By" := UserId;
+            HISRevenueStaging."Created Date Time" := CurrentDateTime;
+            HISRevenueStaging."General Entries Created" := true;
+            HISRevenueStaging.Modify();
+        end;
+    end;
+
+    local procedure GetCachedMappedDimension(GlobalDim2Code: Code[20]; HISCCode: Code[20]): Code[20]
+    var
+        DimensionMapping: Record "EDC HIS GL Accounts Mapping";
+    begin
+        if HISCCode = '' then
+            exit('');
+
+        DimensionMapping.Reset();
+        DimensionMapping.SetRange(Type, DimensionMapping.Type::Dimension);
+        DimensionMapping.SetRange("Dimension Code", GlobalDim2Code);
+        DimensionMapping.SetRange("HIS Code", HISCCode);
+        if DimensionMapping.FindFirst() then
+            exit(DimensionMapping."Department Code");
+
+        exit('');
+    end;
+
+    procedure CollectionHISDocumentDateValidation(
+        HISRevenueStaging: Record "EDC HIS Revenue Staging Table"): Boolean
+    var
+        AllowPostingDate: Record "HIS Allow Posting Date";
+    begin
+        AllowPostingDate.Reset();
+        AllowPostingDate.SetRange("Code Unit Name", '50003');
+        AllowPostingDate.SetFilter("From Date", '<=%1', HISRevenueStaging."Document Date");
+        AllowPostingDate.SetFilter("To Date", '>=%1', HISRevenueStaging."Document Date");
+
+        exit(AllowPostingDate.FindFirst());
+    end;
+
+    // NOTE: Call this function ONCE externally before processing your batch of records, 
+    // rather than calling it inside ProcessLine for every single record.
+    procedure CollectionValidation()
+    var
+        temRevenueStaging: Record "EDC HIS Revenue Staging Table";
+        GLAccountMapping: Record "EDC HIS GL Accounts Mapping";
+        MOPSetupMissing: Text[70];
+        DocumentType: Text[70];
+    begin
+        temRevenueStaging.Reset();
+        temRevenueStaging.SetRange("General Entries Created", false);
+
+        if temRevenueStaging.FindSet() then
+            repeat
+                temRevenueStaging."Error Description" := '';
+                MOPSetupMissing := '';
+                DocumentType := '';
+
+                GLAccountMapping.Reset();
+                GLAccountMapping.SetRange(Type, GLAccountMapping.Type::MOP);
+                GLAccountMapping.SetRange("MOP Code", temRevenueStaging."Mode of Payment");
+                if not GLAccountMapping.FindFirst() then
+                    MOPSetupMissing := StrSubstNo('MOP %1 setup missing', temRevenueStaging."Mode of Payment");
+
+                if temRevenueStaging."Mode of Payment" = '' then
+                    MOPSetupMissing := 'MOP can not be blank';
+
+                GLAccountMapping.Reset();
+                GLAccountMapping.SetRange(Type, GLAccountMapping.Type::Collection);
+                GLAccountMapping.SetRange("Service/Station Head", temRevenueStaging."HIS Document Type");
+                if not GLAccountMapping.FindFirst() then
+                    DocumentType := StrSubstNo('Collection Type %1 setup missing', temRevenueStaging."HIS Document Type");
+
+                if temRevenueStaging."HIS Document Type" = '' then
+                    DocumentType := 'Coll type can not be blank';
+
+                temRevenueStaging."Error Description" := CopyStr(MOPSetupMissing + ' ' + DocumentType, 1, MaxStrLen(temRevenueStaging."Error Description"));
+                temRevenueStaging.Modify(true);
+            until temRevenueStaging.Next() = 0;
+    end;
+
+    var
+        RevenueEntry: Record "EDC HIS Revenue Staging Table";
 }
